@@ -1,20 +1,32 @@
 "use client"
 
-import type React from "react"
-
-import { use,useEffect, useState } from "react"
+import { use, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useUserStore } from "@/store/userStore"
 import { Navbar } from "@/components/Navbar"
-import type { Report } from "@/types"
-import { ArrowLeft, User, Calendar, Info, CheckCircle, Clock, AlertCircle, XCircle } from "lucide-react"
+import { ReportTimeline } from "@/components/ReportTimeline"
+import { ReportAttachments } from "@/components/ReportAttachments"
+import { ReportLockIndicator } from "@/components/ReportLockIndicator"
+import { ArrowLeft, User, Calendar, Phone, Tag, Edit, Lock } from "lucide-react"
 
 export default function AdminReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: reportId } = use(params)
-  const { user, isAuthenticated, getReportById, updateReport, allUsers } = useUserStore()
+  const resolvedParams = use(params)
+  const reportId = resolvedParams.id
+
+  const {
+    user,
+    isAuthenticated,
+    getReportById,
+    updateReport,
+    getAllUsers,
+    lockReport,
+    unlockReport,
+    isReportLocked,
+    getReportLockInfo,
+  } = useUserStore()
   const router = useRouter()
   const report = getReportById(reportId)
-  const [currentStatus, setCurrentStatus] = useState<Report["status"] | "">(report?.status || "")
+  const allUsers = getAllUsers()
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "admin") {
@@ -23,10 +35,18 @@ export default function AdminReportDetailPage({ params }: { params: Promise<{ id
   }, [isAuthenticated, user, router])
 
   useEffect(() => {
-    if (report) {
-      setCurrentStatus(report.status)
+    if (user && report) {
+      // Try to lock the report when viewing
+      lockReport(reportId, user.id)
     }
-  }, [report])
+
+    return () => {
+      // Unlock when leaving the page
+      if (user) {
+        unlockReport(reportId, user.id)
+      }
+    }
+  }, [reportId, user, lockReport, unlockReport, report])
 
   if (!isAuthenticated || user?.role !== "admin") {
     return null
@@ -51,28 +71,10 @@ export default function AdminReportDetailPage({ params }: { params: Promise<{ id
     )
   }
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newStatus = e.target.value as Report["status"]
-    setCurrentStatus(newStatus)
-    updateReport(report.id, { status: newStatus })
-  }
-
-  const getStatusIcon = (status: Report["status"]) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="w-5 h-5 text-green-500" />
-      case "in-progress":
-        return <Clock className="w-5 h-5 text-blue-500" />
-      case "pending":
-        return <AlertCircle className="w-5 h-5 text-red-500" />
-      case "rejected":
-        return <XCircle className="w-5 h-5 text-gray-500" />
-      default:
-        return <Info className="w-5 h-5 text-gray-500" />
-    }
-  }
-
   const createdByUser = allUsers.find((u) => u.id === report.createdBy)
+  const locked = isReportLocked(reportId)
+  const lockInfo = getReportLockInfo(reportId)
+  const canEdit = !locked || lockInfo?.lockedBy === user?.id
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,66 +89,80 @@ export default function AdminReportDetailPage({ params }: { params: Promise<{ id
             <ArrowLeft className="w-5 h-5" />
             <span>Kembali ke Daftar Laporan</span>
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Detail Laporan</h1>
+          <div className="flex items-center space-x-4">
+            <h1 className="text-3xl font-bold text-gray-900">Detail Laporan</h1>
+            {canEdit ? (
+              <button
+                onClick={() => router.push(`/admin/reports/${reportId}/edit`)}
+                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors duration-200"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Edit</span>
+              </button>
+            ) : (
+              <div className="flex items-center space-x-2 bg-gray-400 text-white px-4 py-2 rounded-md cursor-not-allowed">
+                <Lock className="w-4 h-4" />
+                <span>Terkunci</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">{report.title}</h2>
-            <p className="text-gray-700">{report.description}</p>
-          </div>
+        <div className="space-y-6">
+          <ReportLockIndicator reportId={reportId} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-6">
-            <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
-                <User className="w-4 h-4" />
-                <span>Dibuat Oleh:</span>
-              </p>
-              <p className="text-gray-800 font-semibold">{createdByUser?.name || "User Tidak Ditemukan"}</p>
-              <p className="text-sm text-gray-500">{createdByUser?.email}</p>
-            </div>
+          {/* Report Info */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">{report.title}</h2>
+            <p className="text-gray-700 mb-6">{report.description}</p>
 
-            <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
-                <Calendar className="w-4 h-4" />
-                <span>Tanggal Dibuat:</span>
-              </p>
-              <p className="text-gray-800 font-semibold">
-                {new Date(report.createdAt).toLocaleDateString("id-ID", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-6">
+              <div>
+                <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
+                  <User className="w-4 h-4" />
+                  <span>Dibuat Oleh:</span>
+                </p>
+                <p className="text-gray-800 font-semibold">{createdByUser?.name || "User Tidak Ditemukan"}</p>
+                <p className="text-sm text-gray-500">{createdByUser?.email}</p>
+              </div>
 
-            <div>
-              <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
-                {getStatusIcon(currentStatus as Report["status"])}
-                <span>Status:</span>
-              </p>
-              <select
-                value={currentStatus}
-                onChange={handleStatusChange}
-                className="border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="pending">Pending</option>
-                <option value="in-progress">Dikerjakan</option>
-                <option value="completed">Selesai</option>
-                <option value="rejected">Ditolak</option>
-              </select>
-            </div>
+              {report.reporterName && (
+                <div>
+                  <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
+                    <User className="w-4 h-4" />
+                    <span>Nama Pembuat Laporan:</span>
+                  </p>
+                  <p className="text-gray-800 font-semibold">{report.reporterName}</p>
+                </div>
+              )}
 
-            {report.updatedAt && (
+              {report.phoneNumber && (
+                <div>
+                  <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
+                    <Phone className="w-4 h-4" />
+                    <span>Nomor Telepon:</span>
+                  </p>
+                  <p className="text-gray-800 font-semibold">{report.phoneNumber}</p>
+                </div>
+              )}
+
+              {report.problemType && (
+                <div>
+                  <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
+                    <Tag className="w-4 h-4" />
+                    <span>Jenis Masalah:</span>
+                  </p>
+                  <p className="text-gray-800 font-semibold capitalize">{report.problemType}</p>
+                </div>
+              )}
+
               <div>
                 <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
                   <Calendar className="w-4 h-4" />
-                  <span>Terakhir Diperbarui:</span>
+                  <span>Tanggal Dibuat:</span>
                 </p>
                 <p className="text-gray-800 font-semibold">
-                  {new Date(report.updatedAt).toLocaleDateString("id-ID", {
+                  {new Date(report.createdAt).toLocaleDateString("id-ID", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -155,8 +171,16 @@ export default function AdminReportDetailPage({ params }: { params: Promise<{ id
                   })}
                 </p>
               </div>
-            )}
+            </div>
           </div>
+
+          {/* Timeline */}
+          <ReportTimeline report={report} />
+
+          {/* Attachments */}
+          {report.attachments && report.attachments.length > 0 && (
+            <ReportAttachments attachments={report.attachments} />
+          )}
         </div>
       </main>
     </div>

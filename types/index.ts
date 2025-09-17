@@ -14,13 +14,21 @@ export interface Report {
   id: string
   title: string
   description: string
-  status: "pending" | "in-progress" | "completed" | "rejected"
+  status: "pending" | "in-progress" | "completed" | "rejected" | "on-hold"
   createdBy: string
   assignedTo?: string
   createdAt: string
   updatedAt?: string
   priority?: "low" | "medium" | "high"
   category?: string
+  reporterName?: string
+  phoneNumber?: string
+  problemType?: string
+  statusHistory?: ReportStatusHistory[]
+  attachments?: ReportAttachment[]
+  lockedBy?: string
+  lockedAt?: string
+  urgency?: "critical" | "medium" | "low"
 }
 
 export interface Notification {
@@ -67,8 +75,9 @@ export interface ChatMessage {
   message: string
   timestamp: string
   type?: "text" | "file" | "image"
-  fileUrl?: string
   fileName?: string
+  chatChannel?: string // Added chatChannel for better message routing
+  read?: boolean // Added read status for message tracking
 }
 
 export interface UserStore {
@@ -97,6 +106,10 @@ export interface UserStore {
   addReport: (reportData: Omit<Report, "id" | "createdAt">) => void
   updateReport: (id: string, updates: Partial<Report>) => void
   deleteReport: (id: string) => void
+  lockReport: (reportId: string, userId: string) => boolean
+  unlockReport: (reportId: string, userId: string) => boolean
+  isReportLocked: (reportId: string) => boolean
+  getReportLockInfo: (reportId: string) => { lockedBy: string; lockedAt: string } | null
 
   // Notification methods
   addNotification: (notification: Omit<Notification, "id" | "createdAt">) => void
@@ -114,4 +127,30 @@ export interface UserStore {
   // Chat methods
   getChatMessages: () => ChatMessage[]
   addChatMessage: (message: Omit<ChatMessage, "id" | "timestamp">) => void
+  getStaffConversations: (adminUserId: string) => Array<{
+    staffUser: User
+    messages: ChatMessage[]
+    lastMessage?: ChatMessage
+    unreadCount: number
+  }>
+  getStaffOwnConversations: (staffUserId: string) => ChatMessage[]
+  markMessagesAsRead: (chatChannel: string, userId: string) => void
+}
+
+export interface ReportStatusHistory {
+  id: string
+  status: Report["status"]
+  changedBy: string
+  changedAt: string
+  note?: string
+}
+
+export interface ReportAttachment {
+  id: string
+  name: string
+  url: string
+  type: "image" | "video" | "document"
+  size: number
+  uploadedBy: string
+  uploadedAt: string
 }

@@ -2,9 +2,9 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useUserStore } from "@/store/userStore"
-import { X, User, Lock, Eye, EyeOff } from "lucide-react"
+import { X, User, Lock, Eye, EyeOff, Camera, Upload } from "lucide-react"
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -14,11 +14,14 @@ interface ProfileModalProps {
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
   const { user, updateUser } = useUserStore()
   const [activeTab, setActiveTab] = useState<"profile" | "password">("profile")
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Profile form state
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [address, setAddress] = useState("")
+  const [profilePicture, setProfilePicture] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   // Password form state
   const [currentPassword, setCurrentPassword] = useState("")
@@ -38,8 +41,53 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       setName(user.name)
       setEmail(user.email)
       setAddress(user.address || "")
+      setProfilePicture(user.avatar || null)
     }
   }, [user, isOpen])
+
+  const handleProfilePictureChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setMessage("File harus berupa gambar")
+      setMessageType("error")
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage("Ukuran file maksimal 5MB")
+      setMessageType("error")
+      return
+    }
+
+    setIsUploadingImage(true)
+    resetMessage()
+
+    try {
+      // Convert to base64 for demo purposes
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const base64String = event.target?.result as string
+        setProfilePicture(base64String)
+        setIsUploadingImage(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      setMessage("Gagal mengupload gambar")
+      setMessageType("error")
+      setIsUploadingImage(false)
+    }
+  }
+
+  const handleRemoveProfilePicture = () => {
+    setProfilePicture(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
 
   const resetPasswordForm = () => {
     setCurrentPassword("")
@@ -71,6 +119,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         name: name.trim(),
         email: email.trim(),
         address: address.trim(),
+        avatar: profilePicture || undefined,
       })
 
       setMessage("Profile berhasil diperbarui!")
@@ -184,6 +233,62 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
           {activeTab === "profile" ? (
             <form onSubmit={handleProfileSubmit} className="space-y-4">
+              <div className="flex flex-col items-center space-y-4 pb-4 border-b border-gray-200">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    {profilePicture ? (
+                      <img
+                        src={profilePicture || "/placeholder.svg"}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-12 h-12 text-gray-400" />
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="flex items-center space-x-2 px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>{isUploadingImage ? "Uploading..." : "Upload"}</span>
+                  </button>
+
+                  {profilePicture && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfilePicture}
+                      className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                    >
+                      Hapus
+                    </button>
+                  )}
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfilePictureChange}
+                  className="hidden"
+                />
+
+                <p className="text-xs text-gray-500 text-center">Format: JPG, PNG, GIF. Maksimal 5MB</p>
+              </div>
+
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                   Nama Lengkap

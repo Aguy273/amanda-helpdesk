@@ -14,6 +14,8 @@ export default function CreateReportPage() {
   const [formData, setFormData] = useState({
     problemType: "",
     description: "",
+    reporterName: "",
+    phoneNumber: "",
   })
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -45,21 +47,24 @@ export default function CreateReportPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    if (!formData.problemType || !formData.description) {
-      alert("Jenis masalah dan permasalahan harus diisi.")
+    if (!formData.problemType || !formData.description || !formData.reporterName || !formData.phoneNumber) {
+      alert("Semua field harus diisi.")
       setIsSubmitting(false)
       return
     }
 
     try {
       // Create title based on problem type
-      const title = `${formData.problemType === "software" ? "Software" : "Hardware"} Issue`
+      const title = `${formData.problemType === "software" ? "Software" : formData.problemType === "hardware" ? "Hardware" : "Other"} Issue`
 
       addReport({
         title: title,
         description: formData.description,
         createdBy: user!.id,
         status: "pending",
+        reporterName: formData.reporterName,
+        phoneNumber: formData.phoneNumber,
+        problemType: formData.problemType,
       })
       alert("Laporan berhasil dibuat!")
       router.push("/staff/dashboard")
@@ -137,6 +142,38 @@ export default function CreateReportPage() {
 
               {/* Right Side - Form Fields */}
               <div className="space-y-6">
+                {/* Nama Pembuat Laporan */}
+                <div>
+                  <label htmlFor="reporterName" className="block text-lg font-medium text-gray-700 mb-3">
+                    Nama Pembuat Laporan
+                  </label>
+                  <input
+                    id="reporterName"
+                    type="text"
+                    value={formData.reporterName}
+                    onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 bg-gray-50"
+                    placeholder="Masukkan nama lengkap"
+                    required
+                  />
+                </div>
+
+                {/* Nomor Telepon/WhatsApp */}
+                <div>
+                  <label htmlFor="phoneNumber" className="block text-lg font-medium text-gray-700 mb-3">
+                    Nomor Telepon/WhatsApp
+                  </label>
+                  <input
+                    id="phoneNumber"
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700 bg-gray-50"
+                    placeholder="Contoh: 08123456789"
+                    required
+                  />
+                </div>
+
                 {/* Jenis Masalah */}
                 <div>
                   <label htmlFor="problemType" className="block text-lg font-medium text-gray-700 mb-3">
@@ -152,6 +189,7 @@ export default function CreateReportPage() {
                     <option value="">select an option</option>
                     <option value="software">Software</option>
                     <option value="hardware">Hardware</option>
+                    <option value="other">Dan lain-lain</option>
                   </select>
                 </div>
 

@@ -1,6 +1,7 @@
 {
-  "name": "ehelpdesk-amanda",
+  "name": "e-helpdesk-amanda",
   "version": "0.1.0",
+  "description": "proyek ini dibuat oleh Yuga Septiana KerjaPraktek ITG",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -48,11 +49,11 @@
     "immer": "latest",
     "input-otp": "latest",
     "lucide-react": "^0.454.0",
-    "next": "^15.5.3",
+    "next": "14.2.16",
     "next-themes": "latest",
-    "react": "^18.3.1",
+    "react": "^18",
     "react-day-picker": "latest",
-    "react-dom": "^18.3.1",
+    "react-dom": "^18",
     "react-hook-form": "latest",
     "react-resizable-panels": "latest",
     "recharts": "latest",

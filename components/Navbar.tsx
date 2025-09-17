@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useUserStore } from "@/store/userStore"
 import { NotificationDropdown } from "./NotificationDropdown"
 import { ProfileModal } from "./ProfileModal"
-import { Menu, X, MessageCircle, FileText, Users, Settings, LogOut, ChevronDown, User, Plus} from "lucide-react"
+import { Menu, X, MessageCircle, FileText, Users, Settings, LogOut, ChevronDown, User, Plus } from "lucide-react"
 import Link from "next/link"
 
 interface NavbarProps {
@@ -174,8 +174,16 @@ export function Navbar({
                   onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
                   className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">{user?.name?.charAt(0).toUpperCase()}</span>
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center">
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar || "/placeholder.svg"}
+                        alt={user.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white text-sm font-medium">{user?.name?.charAt(0).toUpperCase()}</span>
+                    )}
                   </div>
                   <span className="font-medium">{user?.name}</span>
                   <ChevronDown className="w-4 h-4" />

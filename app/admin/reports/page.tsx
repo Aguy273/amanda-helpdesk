@@ -61,8 +61,8 @@ export default function AdminReportsPage() {
             <option value="all">Semua</option>
             <option value="pending">Pending</option>
             <option value="in-progress">Dikerjakan</option>
+            <option value="on-hold">Ditahan</option>
             <option value="completed">Selesai</option>
-            <option value="rejected">Ditolak</option>
           </select>
         </div>
 

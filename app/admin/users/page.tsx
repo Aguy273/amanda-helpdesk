@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation"
 import { Plus, Edit, Trash2, Mail, User, Eye, EyeOff } from "lucide-react"
 import { useUserStore } from "@/store/userStore"
 import { Navbar } from "@/components/Navbar"
+import { AddressSelector } from "@/components/AddressSelector"
+import { westJavaCities } from "@/data/westJavaRegions"
 import type { User as UserType } from "@/types"
 
 export default function AdminUsersPage() {
@@ -18,8 +20,10 @@ export default function AdminUsersPage() {
     name: "",
     email: "",
     role: "staff" as const,
-    address: "",
     password: "",
+    city: "",
+    district: "",
+    fullAddress: "",
   })
 
   useEffect(() => {
@@ -36,6 +40,42 @@ export default function AdminUsersPage() {
   const allUsers = getAllUsers()
   const staffUsers = allUsers.filter((u) => u.role === "staff")
 
+  const parseAddress = (address: string) => {
+    // Try to parse existing address format: "City, District, Full Address"
+    const parts = address.split(", ")
+    if (parts.length >= 3) {
+      const cityName = parts[0]
+      const districtName = parts[1]
+      const fullAddr = parts.slice(2).join(", ")
+
+      const city = westJavaCities.find((c) => c.name === cityName)
+      const district = city?.districts.find((d) => d.name === districtName)
+
+      return {
+        city: city?.id || "",
+        district: district?.id || "",
+        fullAddress: fullAddr,
+      }
+    }
+
+    return {
+      city: "",
+      district: "",
+      fullAddress: address,
+    }
+  }
+
+  const formatAddress = (city: string, district: string, fullAddress: string) => {
+    const cityObj = westJavaCities.find((c) => c.id === city)
+    const districtObj = cityObj?.districts.find((d) => d.id === district)
+
+    if (cityObj && districtObj && fullAddress) {
+      return `${cityObj.name}, ${districtObj.name}, ${fullAddress}`
+    }
+
+    return fullAddress
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -49,12 +89,19 @@ export default function AdminUsersPage() {
       return
     }
 
+    if (!formData.city || !formData.district || !formData.fullAddress) {
+      alert("Semua field alamat harus diisi")
+      return
+    }
+
+    const formattedAddress = formatAddress(formData.city, formData.district, formData.fullAddress)
+
     if (editingUser) {
       const updateData: any = {
         name: formData.name,
         email: formData.email,
         role: formData.role,
-        address: formData.address,
+        address: formattedAddress,
       }
 
       if (formData.password) {
@@ -67,25 +114,28 @@ export default function AdminUsersPage() {
         name: formData.name,
         email: formData.email,
         role: formData.role,
-        address: formData.address,
+        address: formattedAddress,
         password: formData.password,
       })
     }
 
     setShowModal(false)
     setEditingUser(null)
-    setFormData({ name: "", email: "", role: "staff", address: "", password: "" })
+    setFormData({ name: "", email: "", role: "staff", password: "", city: "", district: "", fullAddress: "" })
     setShowPassword(false)
   }
 
   const handleEdit = (user: UserType) => {
     setEditingUser(user)
+    const addressData = parseAddress(user.address || "")
     setFormData({
       name: user.name,
       email: user.email,
       role: user.role as "staff",
-      address: user.address || "",
       password: "",
+      city: addressData.city,
+      district: addressData.district,
+      fullAddress: addressData.fullAddress,
     })
     setShowModal(true)
   }
@@ -99,7 +149,7 @@ export default function AdminUsersPage() {
   const resetForm = () => {
     setShowModal(false)
     setEditingUser(null)
-    setFormData({ name: "", email: "", role: "staff", address: "", password: "" })
+    setFormData({ name: "", email: "", role: "staff", password: "", city: "", district: "", fullAddress: "" })
     setShowPassword(false)
   }
 
@@ -153,7 +203,7 @@ export default function AdminUsersPage() {
                         />
                         <div>
                           <div className="text-sm font-medium text-gray-900">{staffUser.name}</div>
-                          <div className="text-sm text-gray-500">{staffUser.address}</div>
+                          <div className="text-sm text-gray-500 max-w-xs truncate">{staffUser.address}</div>
                         </div>
                       </div>
                     </td>
@@ -196,7 +246,7 @@ export default function AdminUsersPage() {
         {/* Modal */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
                   {editingUser ? "Edit Staff" : "Tambah Staff Baru"}
@@ -255,15 +305,14 @@ export default function AdminUsersPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Alamat</label>
-                    <textarea
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={3}
-                    />
-                  </div>
+                  <AddressSelector
+                    selectedCity={formData.city}
+                    selectedDistrict={formData.district}
+                    fullAddress={formData.fullAddress}
+                    onCityChange={(city) => setFormData({ ...formData, city })}
+                    onDistrictChange={(district) => setFormData({ ...formData, district })}
+                    onFullAddressChange={(fullAddress) => setFormData({ ...formData, fullAddress })}
+                  />
 
                   <div className="flex space-x-3 pt-4">
                     <button

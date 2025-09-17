@@ -201,6 +201,7 @@ export const useUserStore = create<UserStore>()(
             pending: "Pending",
             "in-progress": "Sedang Dikerjakan",
             completed: "Selesai",
+            "on-hold": "Ditahan",
             rejected: "Ditolak",
           }
 
@@ -218,6 +219,76 @@ export const useUserStore = create<UserStore>()(
       deleteReport: (id: string) => {
         const updatedReports = get().reports.filter((report) => report.id !== id)
         set({ reports: updatedReports })
+      },
+
+      lockReport: (reportId: string, userId: string) => {
+        const report = get().reports.find((r) => r.id === reportId)
+        if (!report) return false
+
+        // Check if already locked by someone else
+        if (report.lockedBy && report.lockedBy !== userId) {
+          return false
+        }
+
+        const updatedReports = get().reports.map((r) =>
+          r.id === reportId
+            ? {
+                ...r,
+                lockedBy: userId,
+                lockedAt: new Date().toISOString(),
+              }
+            : r,
+        )
+        set({ reports: updatedReports })
+        return true
+      },
+
+      unlockReport: (reportId: string, userId: string) => {
+        const report = get().reports.find((r) => r.id === reportId)
+        if (!report || (report.lockedBy && report.lockedBy !== userId)) {
+          return false
+        }
+
+        const updatedReports = get().reports.map((r) =>
+          r.id === reportId
+            ? {
+                ...r,
+                lockedBy: undefined,
+                lockedAt: undefined,
+              }
+            : r,
+        )
+        set({ reports: updatedReports })
+        return true
+      },
+
+      isReportLocked: (reportId: string) => {
+        const report = get().reports.find((r) => r.id === reportId)
+        if (!report || !report.lockedBy) return false
+
+        // Auto-unlock if locked for more than 30 minutes
+        const lockTime = new Date(report.lockedAt || "").getTime()
+        const now = new Date().getTime()
+        const thirtyMinutes = 30 * 60 * 1000
+
+        if (now - lockTime > thirtyMinutes) {
+          get().unlockReport(reportId, report.lockedBy)
+          return false
+        }
+
+        return true
+      },
+
+      getReportLockInfo: (reportId: string) => {
+        const report = get().reports.find((r) => r.id === reportId)
+        if (!report || !report.lockedBy || !get().isReportLocked(reportId)) {
+          return null
+        }
+
+        return {
+          lockedBy: report.lockedBy,
+          lockedAt: report.lockedAt || "",
+        }
       },
 
       // Notification methods
@@ -276,18 +347,37 @@ export const useUserStore = create<UserStore>()(
       getChatMessages: () => get().chatMessages,
 
       addChatMessage: (message) => {
+        const currentUser = get().user
+        if (!currentUser) return
+
         const newMessage: ChatMessage = {
           ...message,
-          id: `message-${Date.now()}`,
+          id: `message-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           timestamp: new Date().toISOString(),
+          read: false,
         }
-        set({ chatMessages: [...get().chatMessages, newMessage] })
 
-        const currentUser = get().user
-        if (currentUser?.role === "staff") {
+        if (currentUser.role === "staff" && !message.recipientId) {
+          // Staff sending message to all admin/master users
           const allUsers = get().allUsers
           const adminAndMasterUsers = allUsers.filter((u) => u.role === "admin" || u.role === "master")
 
+          // Create separate message for each admin/master user with proper channel
+          const newMessages: ChatMessage[] = []
+          adminAndMasterUsers.forEach((adminUser) => {
+            const staffMessage: ChatMessage = {
+              ...newMessage,
+              id: `message-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${adminUser.id}`,
+              recipientId: adminUser.id,
+              chatChannel: `staff-${currentUser.id}-${adminUser.id}`,
+            }
+            newMessages.push(staffMessage)
+          })
+
+          // Add all messages at once
+          set({ chatMessages: [...get().chatMessages, ...newMessages] })
+
+          // Send notifications to admin/master users
           adminAndMasterUsers.forEach((adminUser) => {
             get().addNotification({
               userId: adminUser.id,
@@ -298,7 +388,70 @@ export const useUserStore = create<UserStore>()(
               actionUrl: `/${adminUser.role}/chat`,
             })
           })
+        } else {
+          // Regular admin/master to admin/master or admin/master to staff message
+          const enhancedMessage = { ...newMessage }
+
+          if (message.recipientId) {
+            // If it's a staff conversation (chatChannel provided)
+            if (message.chatChannel) {
+              enhancedMessage.chatChannel = message.chatChannel
+            } else {
+              // Regular conversation between admin/master users
+              enhancedMessage.chatChannel = `${Math.min(currentUser.id, message.recipientId)}-${Math.max(currentUser.id, message.recipientId)}`
+            }
+          }
+
+          set({ chatMessages: [...get().chatMessages, enhancedMessage] })
+
+          // Send notification to recipient if it's not a staff message
+          if (message.recipientId && !message.chatChannel?.startsWith("staff-")) {
+            get().addNotification({
+              userId: message.recipientId,
+              title: "Pesan Chat Baru",
+              message: `${currentUser.name} mengirim pesan: "${newMessage.message.length > 50 ? newMessage.message.substring(0, 50) + "..." : newMessage.message}"`,
+              type: "info",
+              read: false,
+              actionUrl: `/${get().allUsers.find((u) => u.id === message.recipientId)?.role}/chat`,
+            })
+          }
         }
+      },
+
+      getStaffConversations: (adminUserId: string) => {
+        const messages = get().chatMessages
+        const staffUsers = get().allUsers.filter((u) => u.role === "staff")
+
+        return staffUsers
+          .map((staffUser) => {
+            const conversationMessages = messages.filter(
+              (msg) => msg.chatChannel === `staff-${staffUser.id}-${adminUserId}`,
+            )
+
+            return {
+              staffUser,
+              messages: conversationMessages,
+              lastMessage: conversationMessages[conversationMessages.length - 1],
+              unreadCount: conversationMessages.filter((msg) => msg.senderId === staffUser.id && !msg.read).length,
+            }
+          })
+          .filter((conv) => conv.messages.length > 0)
+      },
+
+      getStaffOwnConversations: (staffUserId: string) => {
+        const messages = get().chatMessages
+        return messages.filter(
+          (msg) =>
+            msg.chatChannel?.startsWith(`staff-${staffUserId}-`) ||
+            (msg.senderId === staffUserId && msg.chatChannel?.startsWith(`staff-${staffUserId}-`)),
+        )
+      },
+
+      markMessagesAsRead: (chatChannel: string, userId: string) => {
+        const updatedMessages = get().chatMessages.map((msg) =>
+          msg.chatChannel === chatChannel && msg.senderId !== userId ? { ...msg, read: true } : msg,
+        )
+        set({ chatMessages: updatedMessages })
       },
     }),
     {

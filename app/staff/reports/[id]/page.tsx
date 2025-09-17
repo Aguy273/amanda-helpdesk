@@ -1,34 +1,34 @@
 "use client"
 
-import { useEffect } from "react"
+import { use, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { ArrowLeft, User, Calendar, Phone, Tag } from "lucide-react"
 import { useUserStore } from "@/store/userStore"
 import { Navbar } from "@/components/Navbar"
 import { ReportTimeline } from "@/components/ReportTimeline"
 import { ReportAttachments } from "@/components/ReportAttachments"
-import { ArrowLeft, User, Calendar, Phone, Tag } from "lucide-react"
 
-export default function MasterReportDetailPage({ params }: { params: { id: string } }) {
-  const { user, isAuthenticated, getReportById, updateReport, getAllUsers } = useUserStore()
+export default function StaffReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: reportId } = use(params)
+  const { user, isAuthenticated, getReportById, getAllUsers } = useUserStore()
   const router = useRouter()
-  const reportId = params.id
   const report = getReportById(reportId)
   const allUsers = getAllUsers()
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== "master") {
+    if (!isAuthenticated || user?.role !== "staff") {
       router.push("/login")
     }
   }, [isAuthenticated, user, router])
 
-  if (!isAuthenticated || user?.role !== "master") {
+  if (!isAuthenticated || user?.role !== "staff") {
     return null
   }
 
   if (!report) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-        <Navbar showReports showChat />
+        <Navbar showCreateReport showChat />
         <div className="text-center p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Laporan Tidak Ditemukan</h1>
           <p className="text-gray-600">Laporan dengan ID {reportId} tidak ada.</p>
@@ -48,7 +48,7 @@ export default function MasterReportDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar showReports showChat />
+      <Navbar showCreateReport showChat />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8 flex items-center justify-between">
@@ -69,15 +69,6 @@ export default function MasterReportDetailPage({ params }: { params: { id: strin
             <p className="text-gray-700 mb-6">{report.description}</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-6">
-              <div>
-                <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
-                  <User className="w-4 h-4" />
-                  <span>Dibuat Oleh:</span>
-                </p>
-                <p className="text-gray-800 font-semibold">{createdByUser?.name || "User Tidak Ditemukan"}</p>
-                <p className="text-sm text-gray-500">{createdByUser?.email}</p>
-              </div>
-
               {report.reporterName && (
                 <div>
                   <p className="text-sm font-medium text-gray-600 flex items-center space-x-2 mb-1">
