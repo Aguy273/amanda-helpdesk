@@ -8,8 +8,8 @@ import { useUserStore } from "@/store/userStore"
 import { Navbar } from "@/components/Navbar"
 import { ArrowLeft, Save, X } from "lucide-react"
 
-export default function AdminReportEditPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function AdminReportEditPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+  const resolvedParams = params instanceof Promise ? use(params) : params
   const reportId = resolvedParams.id
 
   const { user, isAuthenticated, getReportById, updateReport, isReportLocked, getReportLockInfo } = useUserStore()

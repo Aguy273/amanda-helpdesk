@@ -8,8 +8,10 @@ import { Navbar } from "@/components/Navbar"
 import { ReportTimeline } from "@/components/ReportTimeline"
 import { ReportAttachments } from "@/components/ReportAttachments"
 
-export default function StaffReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: reportId } = use(params)
+export default function StaffReportDetailPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+  const resolvedParams = params instanceof Promise ? use(params) : params
+  const reportId = resolvedParams.id
+
   const { user, isAuthenticated, getReportById, getAllUsers } = useUserStore()
   const router = useRouter()
   const report = getReportById(reportId)

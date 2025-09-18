@@ -46,6 +46,26 @@ const initialReports: Report[] = [
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     priority: "high",
     category: "Network",
+    attachments: [
+      {
+        id: "attachment-1",
+        name: "network-diagram.png",
+        url: "/network-diagram-showing-router-connections.jpg",
+        type: "image",
+        size: 245760,
+        uploadedBy: "staff-1",
+        uploadedAt: new Date(Date.now() - 86400000).toISOString(),
+      },
+      {
+        id: "attachment-2",
+        name: "speed-test-results.pdf",
+        url: "/document-icon-for-speed-test-results.jpg",
+        type: "document",
+        size: 102400,
+        uploadedBy: "staff-1",
+        uploadedAt: new Date(Date.now() - 86400000).toISOString(),
+      },
+    ],
   },
   {
     id: "report-2",
@@ -57,6 +77,35 @@ const initialReports: Report[] = [
     createdAt: new Date(Date.now() - 172800000).toISOString(),
     priority: "medium",
     category: "Hardware",
+    attachments: [
+      {
+        id: "attachment-3",
+        name: "printer-error-photo.jpg",
+        url: "/printer-showing-error-message-on-display.jpg",
+        type: "image",
+        size: 512000,
+        uploadedBy: "staff-1",
+        uploadedAt: new Date(Date.now() - 172800000).toISOString(),
+      },
+      {
+        id: "attachment-4",
+        name: "printer-troubleshooting-video.mp4",
+        url: "/video-thumbnail-showing-printer-troubleshooting-st.jpg",
+        type: "video",
+        size: 2048000,
+        uploadedBy: "staff-1",
+        uploadedAt: new Date(Date.now() - 172800000).toISOString(),
+      },
+      {
+        id: "attachment-5",
+        name: "error-log.txt",
+        url: "/text-document-icon-for-error-log-file.jpg",
+        type: "document",
+        size: 8192,
+        uploadedBy: "staff-1",
+        uploadedAt: new Date(Date.now() - 172800000).toISOString(),
+      },
+    ],
   },
 ]
 
@@ -233,10 +282,10 @@ export const useUserStore = create<UserStore>()(
         const updatedReports = get().reports.map((r) =>
           r.id === reportId
             ? {
-                ...r,
-                lockedBy: userId,
-                lockedAt: new Date().toISOString(),
-              }
+              ...r,
+              lockedBy: userId,
+              lockedAt: new Date().toISOString(),
+            }
             : r,
         )
         set({ reports: updatedReports })
@@ -252,10 +301,10 @@ export const useUserStore = create<UserStore>()(
         const updatedReports = get().reports.map((r) =>
           r.id === reportId
             ? {
-                ...r,
-                lockedBy: undefined,
-                lockedAt: undefined,
-              }
+              ...r,
+              lockedBy: undefined,
+              lockedAt: undefined,
+            }
             : r,
         )
         set({ reports: updatedReports })
@@ -398,7 +447,8 @@ export const useUserStore = create<UserStore>()(
               enhancedMessage.chatChannel = message.chatChannel
             } else {
               // Regular conversation between admin/master users
-              enhancedMessage.chatChannel = `${Math.min(currentUser.id, message.recipientId)}-${Math.max(currentUser.id, message.recipientId)}`
+              const ids = [currentUser.id, message.recipientId].sort()
+              enhancedMessage.chatChannel = `${ids[0]}-${ids[1]}`
             }
           }
 

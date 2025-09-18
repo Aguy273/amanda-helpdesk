@@ -9,8 +9,8 @@ import { ReportAttachments } from "@/components/ReportAttachments"
 import { ReportLockIndicator } from "@/components/ReportLockIndicator"
 import { ArrowLeft, User, Calendar, Phone, Tag, Edit, Lock } from "lucide-react"
 
-export default function AdminReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+export default function AdminReportDetailPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+  const resolvedParams = params instanceof Promise ? use(params) : params
   const reportId = resolvedParams.id
 
   const {
@@ -35,7 +35,7 @@ export default function AdminReportDetailPage({ params }: { params: Promise<{ id
   }, [isAuthenticated, user, router])
 
   useEffect(() => {
-    if (user && report) {
+    if (user && reportId) {
       // Try to lock the report when viewing
       lockReport(reportId, user.id)
     }
@@ -46,7 +46,7 @@ export default function AdminReportDetailPage({ params }: { params: Promise<{ id
         unlockReport(reportId, user.id)
       }
     }
-  }, [reportId, user, lockReport, unlockReport, report])
+  }, [reportId, user, lockReport, unlockReport]) // Removed 'report' dependency
 
   if (!isAuthenticated || user?.role !== "admin") {
     return null

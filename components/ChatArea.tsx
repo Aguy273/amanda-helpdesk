@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Send, Phone, Video, Info, Smile, Paperclip, FileText } from "lucide-react"
 import { useUserStore } from "@/store/userStore"
 
@@ -11,8 +11,9 @@ interface ChatAreaProps {
 }
 
 export function ChatArea({ selectedUserId, currentUserRole }: ChatAreaProps) {
-  const { user, addChatMessage, getChatMessages, getStaffOwnConversations, markMessagesAsRead, allUsers } =
-    useUserStore()
+  const { user, addChatMessage, getChatMessages, getStaffOwnConversations, allUsers } = useUserStore()
+  const markMessagesAsRead = useUserStore((state) => state.markMessagesAsRead)
+
   const [message, setMessage] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
@@ -28,8 +29,7 @@ export function ChatArea({ selectedUserId, currentUserRole }: ChatAreaProps) {
   // Common emojis for quick access
   const commonEmojis = ["😀", "😂", "😊", "😍", "🤔", "👍", "👎", "❤️", "🎉", "🔥", "💯", "😎"]
 
-  // Get messages for selected conversation
-  const getConversationMessages = () => {
+  const getConversationMessages = useCallback(() => {
     if (selectedUserId === "all") {
       return allMessages
     }
@@ -47,7 +47,7 @@ export function ChatArea({ selectedUserId, currentUserRole }: ChatAreaProps) {
         (msg.senderId === user.id && msg.recipientId === selectedUserId) ||
         (msg.senderId === selectedUserId && msg.recipientId === user.id),
     )
-  }
+  }, [selectedUserId, user, allMessages, isStaffConversation, actualStaffUserId])
 
   const conversationMessages = getConversationMessages()
 
@@ -55,7 +55,7 @@ export function ChatArea({ selectedUserId, currentUserRole }: ChatAreaProps) {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
-  }, [conversationMessages])
+  }, [conversationMessages]) // Use entire array instead of length
 
   useEffect(() => {
     if (isStaffConversation && actualStaffUserId && user) {
@@ -143,7 +143,7 @@ export function ChatArea({ selectedUserId, currentUserRole }: ChatAreaProps) {
       }, 3000)
       return () => clearInterval(interval)
     }
-  }, [selectedUser])
+  }, [selectedUser]) // Use entire selectedUser object instead of id
 
   if (!selectedUserId) {
     return (
@@ -184,7 +184,7 @@ export function ChatArea({ selectedUserId, currentUserRole }: ChatAreaProps) {
                   <img
                     src={getUserAvatar(msg.senderId) || "/placeholder.svg"}
                     alt={msg.senderName}
-                    className="w-8 h-8 rounded-full object-cover"
+                    className="w-8 h-8 rounded-full object-cover mr-3"
                   />
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-1">

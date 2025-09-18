@@ -12,7 +12,6 @@ export function NotificationToast() {
   useEffect(() => {
     if (!user) return
 
-    // Filter notifications for current user that are unread and recent (last 10 seconds)
     const recentNotifications = notifications.filter((n) => {
       const isForUser = n.userId === user.id
       const isRecent = new Date().getTime() - new Date(n.createdAt).getTime() < 10000 // 10 seconds
@@ -20,16 +19,25 @@ export function NotificationToast() {
     })
 
     if (recentNotifications.length > 0) {
-      setVisibleNotifications(recentNotifications.slice(0, 3)) // Show max 3 toasts
+      setVisibleNotifications((prev) => {
+        const newNotificationIds = recentNotifications.map((n) => n.id).sort()
+        const currentNotificationIds = prev.map((n) => n.id).sort()
 
-      // Auto-hide after 8 seconds
+        if (JSON.stringify(newNotificationIds) !== JSON.stringify(currentNotificationIds)) {
+          return recentNotifications.slice(0, 3) // Show max 3 toasts
+        }
+        return prev
+      })
+
       const timer = setTimeout(() => {
         setVisibleNotifications([])
       }, 8000)
 
       return () => clearTimeout(timer)
+    } else {
+      setVisibleNotifications([])
     }
-  }, [notifications, user])
+  }, [notifications, user]) // Updated dependency array
 
   const getNotificationIcon = (type: Notification["type"]) => {
     switch (type) {

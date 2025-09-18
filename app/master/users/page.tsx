@@ -214,10 +214,14 @@ export default function MasterUsersPage() {
                     </label>
                     <input
                       type="text"
+                      name="name"
+                      id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
+                      autoComplete="name"
+                      placeholder="Masukkan nama lengkap"
                     />
                   </div>
 
@@ -228,6 +232,8 @@ export default function MasterUsersPage() {
                     </label>
                     <input
                       type="email"
+                      name="email"
+                      id="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -241,6 +247,8 @@ export default function MasterUsersPage() {
                       Role
                     </label>
                     <select
+                      name="role"
+                      id="role"
                       value={formData.role}
                       onChange={(e) => setFormData({ ...formData, role: e.target.value as "admin" | "staff" })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -258,6 +266,8 @@ export default function MasterUsersPage() {
                     <div className="relative">
                       <input
                         type={showPassword ? "text" : "password"}
+                        name="password"
+                        id="password"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -278,6 +288,8 @@ export default function MasterUsersPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Alamat</label>
                     <textarea
+                      name="address"
+                      id="address"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"

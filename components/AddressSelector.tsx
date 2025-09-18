@@ -28,15 +28,17 @@ export function AddressSelector({
       const city = westJavaCities.find((c) => c.id === selectedCity)
       setAvailableDistricts(city?.districts || [])
 
-      // Reset district if city changes and current district is not available
+      // Remove onDistrictChange from dependency array to prevent infinite loop
       if (selectedDistrict && city && !city.districts.find((d) => d.id === selectedDistrict)) {
         onDistrictChange("")
       }
     } else {
       setAvailableDistricts([])
-      onDistrictChange("")
+      if (selectedDistrict) {
+        onDistrictChange("")
+      }
     }
-  }, [selectedCity, selectedDistrict, onDistrictChange])
+  }, [selectedCity, selectedDistrict]) // Removed onDistrictChange from dependencies
 
   return (
     <div className="space-y-4">
